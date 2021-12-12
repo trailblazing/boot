@@ -1,0 +1,7 @@
+cscope.*
+.cscope.*
+tags
+
+*.swp
+
+/.vim/
