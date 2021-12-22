@@ -24,7 +24,7 @@
 " SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-if exists('g:boot_loaded')
+if exists('g:autoloaded_boot')
     finish
 endif
 
@@ -380,7 +380,7 @@ function! boot#project(log_address, is_windows, log_verbose)
     return l:dir
 endfunction
 
-let g:boot_loaded = 1
+let g:autoloaded_boot = 1
 
 
 
