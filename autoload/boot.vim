@@ -2,16 +2,16 @@
 "
 " Copyright (c) 2021, Tuo Jung
 " All rights reserved.
-" 
+"
 " Redistribution and use in source and binary forms, with or without
-" modification, are permitted provided that the following conditions are met: 
-" 
+" modification, are permitted provided that the following conditions are met:
+"
 " 1. Redistributions of source code must retain the above copyright notice, this
-"    list of conditions and the following disclaimer. 
+"    list of conditions and the following disclaimer.
 " 2. Redistributions in binary form must reproduce the above copyright notice,
 "    this list of conditions and the following disclaimer in the documentation
-"    and/or other materials provided with the distribution. 
-" 
+"    and/or other materials provided with the distribution.
+"
 " THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 " ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 " WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -46,7 +46,7 @@ function! boot#function_name(sid, sfile)
     let num    = matchstr(a:sid, '<SNR>\zs\d\+\ze_')
     let index  = stridx(name, num)
     let result = name[index + strlen(num) + 1 : strlen(name) - 1]
-    return result 
+    return result
 endfunction
 " let function_name = boot#function_name(expand('<sfile>'))
 
@@ -123,33 +123,33 @@ endif
 
 " " Demonstration of the plugin directory settings of vim
 " if ! exists("g:vimrc_dir")
-" 
+"
 "     " let vimrc_file = boot#chomped_system("sudo realpath $MYVIMRC")
 "     let vimrc_file = boot#chomped_system("realpath $MYVIMRC")
 "     " call boot#chomped_system("printf \"\nvimrc_file\t\t: \"" . vimrc_file . " >> " . a:log_address)
-" 
+"
 "     " let vimrc_base = boot#chomped_system("basename \"". vimrc_file . "\"")
-" 
+"
 "     let g:vimrc_dir  = boot#chomped_system("dirname \"". vimrc_file ."\" | cat - | xargs realpath")
 "     " let g:vimrc_dir  = substitute(vimrc_file, "\/".vimrc_base, '', 'g')
-"     " echom 'g:vimrc_dir  =' . g:vimrc_dir   
+"     " echom 'g:vimrc_dir  =' . g:vimrc_dir
 "     silent! execute '!(printf "g:vimrc_dir\t\t: ' . g:vimrc_dir .'")' . ' >> ' . a:log_address . ' 2>&1 &'
-" 
+"
 "     let g:plugin_dir = expand(g:vimrc_dir, 1) . '/.vim'
-" 
+"
 " endif
 
 
 " We do not handle a file truncation in this method
 " Just redir and echo to a fixed log file, g:log_address
-function! boot#log_silent(log_address, tips, value, log_verbose)
+function! boot#log_silent(log_address, tips, value, fix_tips_width, log_verbose)
 
     " hard to understand, gave up
     " if (0 < a:0)
     "     let value = "\"" . a:1 . "\""
     " else
     "     let value = ""
-    " endif    
+    " endif
 
     " if (1 < a:0)
     "     let truncate_method = a:2
@@ -158,97 +158,99 @@ function! boot#log_silent(log_address, tips, value, log_verbose)
     "     endif
     " else
     "     let truncate_method = ">>"
-    " endif    
+    " endif
 
     let truncate_method = ">>"
 
     " deal with "\n" and '\n'
     let header = ""
-    let final = a:tips 
+    let left_hand_value = a:tips
 
-    " let final = substitute(a:tips, '!', '\\!', '')
-    " let find_quote = stridx(final, "\"")
+    " let left_hand_value = substitute(a:tips, '!', '\\!', '')
+    " let find_quote = stridx(left_hand_value, "\"")
     " if -1 != find_quote
-    "     echom "logsilent has double quote:" . final
+    "     echom "logsilent has double quote:" . left_hand_value
     " endif
-    " let final = substitute(final, '"', "'", '')
-    " let final = substitute(final_temp, "!", '', '')
+    " let left_hand_value = substitute(left_hand_value, '"', "'", '')
+    " let left_hand_value = substitute(left_hand_value_temp, "!", '', '')
 
-    " devide final tips to two parts for it has newline original
-    if final =~ "\n" || final =~ '\n' || final == "\n" || final == '\n'
-        if final =~ "\n" || final == "\n"
-            let index = strridx(final, "\n")
+    " devide left_hand_value tips to two parts for it has newline original
+    if left_hand_value =~ "\n" || left_hand_value =~ '\n' || left_hand_value == "\n" || left_hand_value == '\n'
+        if left_hand_value =~ "\n" || left_hand_value == "\n"
+            let index = strridx(left_hand_value, "\n")
             if 0 == index
                 let header = "\n"  " let header = '\n'   " trick
                 " let truncate_method = ">"
             elseif -1 != index
-                " let header = final[0: index - 1] . '\n' " trick
-                let header = final[0: index - 1] . "\n" " trick
+                " let header = left_hand_value[0: index - 1] . '\n' " trick
+                let header = left_hand_value[0: index - 1] . "\n" " trick
             endif
-            if index == strlen(final) - strlen("\n")
-                let final = ""
+            if index == strlen(left_hand_value) - strlen("\n")
+                let left_hand_value = ""
             else
-                let final = final[index + strlen("\n"): strlen(final) - 1]
+                let left_hand_value = left_hand_value[index + strlen("\n") : strlen(left_hand_value) - 1]
             endif
             " silent! execute '!(printf header1: "'. header . '" >> ' . a:log_address . ' 2>&1 &) > /dev/null'
-            " silent! execute '!(printf final1: "'. final . '" >> ' . a:log_address . ' 2>&1 &) > /dev/null'
+            " silent! execute '!(printf left_hand_value1: "'. left_hand_value . '" >> ' . a:log_address . ' 2>&1 &) > /dev/null'
         endif
-        if final =~ '\n' || final == '\n'
-            let index = strridx(final, '\n')
+        if left_hand_value =~ '\n' || left_hand_value == '\n'
+            let index = strridx(left_hand_value, '\n')
             if 0 == index
                 let header = "\n"  " let header = '\n' " trick
                 " let truncate_method = ">"
             elseif -1 != index
-                " let header = final[0: index - 1] . '\n' " trick
-                let header = final[0: index - 1] . "\n" " trick
+                " let header = left_hand_value[0: index - 1] . '\n' " trick
+                let header = left_hand_value[0: index - 1] . "\n" " trick
             endif
-            if index == strlen(final) - strlen('\n')
-                let final = ""
+            if index == strlen(left_hand_value) - strlen('\n')
+                let left_hand_value = ""
             else
-                let final = final[index + strlen('\n'): strlen(final) - 1]
+                let left_hand_value = left_hand_value[index + strlen('\n') : strlen(left_hand_value) - 1]
             endif
             " silent! execute '!(printf header2: "'. header . '" >> ' . a:log_address . ' 2>&1 &) > /dev/null'
-            " silent! execute '!(printf final2: "'. final . '" >> ' . a:log_address . ' 2>&1 &) > /dev/null'
+            " silent! execute '!(printf left_hand_value2: "'. left_hand_value . '" >> ' . a:log_address . ' 2>&1 &) > /dev/null'
         endif
     endif
 
 
-    let display_width = strdisplaywidth(final)
-    let fix_tips_width = 40
+    let display_width = strdisplaywidth(left_hand_value)
+    " let fix_tips_width = 40
 
-    let body = ""
-    if fix_tips_width <= display_width
+    let fat_body = ""
+    if a:fix_tips_width <= display_width
 
-        "   if final !~ "\n" && final !~ '\n'
-        "       let final .= '\n'
+        "   if left_hand_value !~ "\n" && left_hand_value !~ '\n'
+        "       let left_hand_value .= '\n'
         "   endif
 
-        let body = final
-        let final = ""
+        let fat_body = left_hand_value
+        let left_hand_value = ""
     endif
 
-    if ! ("" == final && "" == a:value)
+    if ! ("" == left_hand_value && "" == a:value)
         let escape_char_count = 0
 
-        " for il in final
+        " for il in left_hand_value
         "     if ("\\" == il)
         "         let escape_char_count += 1
         "     endif
         " endfor
 
-        " if fix_tips_width > display_width
+        " if a:fix_tips_width > display_width
 
-        let display_width = strdisplaywidth(final)
-        let gap = fix_tips_width - display_width + escape_char_count
+        let display_width = strdisplaywidth(left_hand_value)
+        let gap = a:fix_tips_width - display_width + escape_char_count
         let space_full_fill = ""
         while 0 < gap
             let space_full_fill .= " "
             let gap -= 1
         endwhile
-        let final .= space_full_fill
+        let left_hand_value .= space_full_fill
     endif
 
+
     if 1 == a:log_verbose
+        :silent! execute 'redir >> ' . a:log_address
         if "" != header
 
             " if '>' == truncate_method
@@ -268,65 +270,64 @@ function! boot#log_silent(log_address, tips, value, log_verbose)
                 " :silent! execute '!redir > ' . a:log_address  " redir udefined
                 " :silent! execute 'redir! > ' . a:log_address  " truncate the log file
                 " :silent! execute 'redir > ' . a:log_address   " does not work
-                :silent! execute 'redir >> ' . a:log_address
+
+                " :silent! execute 'redir >> ' . a:log_address
 
                 " echom "\n"  " ^@ or display follow message if keep it and will ask for confirmation if donot commont out
                 silent! echom ""
-                redir END
+                " redir END
+
                 " " needs confirmation
                 " silent! execute "!(printf \n  > " . a:log_address . " 2>&1) &>/dev/null"
             else
-                :silent! execute 'redir >> ' . a:log_address
+                " :silent! execute 'redir >> ' . a:log_address
 
                 " silent! execute '!' . '(printf "' . header . '" ' . truncate_method . ' ' . a:log_address . ' 2>&1) &>/dev/null &'
                 " :silent! execute '! "' . header . '" '
 
                 silent! echom header
-                redir END
+                " redir END
             endif
         endif
-    endif     " a:log_verbose
 
-    if 1 == a:log_verbose
-        :silent! execute 'redir >> ' . a:log_address
 
-        if "" != body 
+        if "" != fat_body
 
             " if '>' == truncate_method && "" == header
-            "     let body = '\n' . body
+            "     let fat_body = '\n' . fat_body
             " endif
-            " silent! execute '!' . '(printf "' . body . '" >> ' . a:log_address . ' 2>&1) &>/dev/null &'
-            " :silent! execute '! "' . body . '" '
+            " silent! execute '!' . '(printf "' . fat_body . '" >> ' . a:log_address . ' 2>&1) &>/dev/null &'
+            " :silent! execute '! "' . fat_body . '" '
 
-            silent! echom body
+            silent! echom fat_body
         endif
 
-        " if '>' == truncate_method && "" == body && "" == header
-        "     let final = '\n' . final
+        " if '>' == truncate_method && "" == fat_body && "" == header
+        "     let left_hand_value = '\n' . left_hand_value
         " endif
 
-        let final_value = a:value
+        let right_hand_value = a:value
 
-        " let final_value = substitute(a:value, '!', '\\!', '')
-        " let find_quote = stridx(final_value, "\"")
+        " let right_hand_value = substitute(a:value, '!', '\\!', '')
+        " let find_quote = stridx(right_hand_value, "\"")
         " if -1 != find_quote
-        "     echo "logsilent has double quote:" . final_value
+        "     echo "logsilent has double quote:" . right_hand_value
         " endif
-        " let final_value = substitute(final_value, '"', "'", '')
-        " let final_value = substitute(final_value_temp, "!", '', '')
+        " let right_hand_value = substitute(right_hand_value, '"', "'", '')
+        " let right_hand_value = substitute(right_hand_value_temp, "!", '', '')
 
-        let final_value = substitute(final_value, '\n\+$', '', '')
-        let final_value = substitute(final_value, '\n', '', '')
-        let final_value = substitute(final_value, "\n", '', '')
+        let right_hand_value = substitute(right_hand_value, '\n\+$', '', '')
+        let right_hand_value = substitute(right_hand_value, '\n', '', '')
+        let right_hand_value = substitute(right_hand_value, "\n", '', '')
 
-        if ! ("" == final && "" == a:value)
+        if ! ("" == left_hand_value && "" == a:value)
 
-            " silent! execute '!' . '(printf "' . final . '": "'. final_value . '" >> ' . a:log_address . ' 2>&1) &>/dev/null &'
-            " silent! execute '! ' . final . ': '. final_value . ' '
+            " silent! execute '!' . '(printf "' . left_hand_value . '": "'. right_hand_value . '" >> ' . a:log_address . ' 2>&1) &>/dev/null &'
+            " silent! execute '! ' . left_hand_value . ': '. right_hand_value . ' '
 
-            silent! echom final . ': '. final_value
-
-            " :call system(shellescape('printf ' . final . ': '. final_value ))
+            silent! echom left_hand_value . ': '. right_hand_value
+            " silent! echom ""
+            " :call system(shellescape('printf ' . left_hand_value . ': '. right_hand_value ))
 
         endif
         redir END
@@ -336,9 +337,9 @@ endfunction
 command! -nargs=+ -complete=command LogSilent call boot#log_silent(<f-args>)
 
 " Get project directory
-function! boot#project(log_address, is_windows, log_verbose) 
-    call boot#log_silent(a:log_address, "\n", "", a:log_verbose) 
-    call boot#log_silent(a:log_address, "project::a:is_windows", a:is_windows, a:log_verbose)
+function! boot#project(log_address, is_windows, fix_tips_width, log_verbose)
+    call boot#log_silent(a:log_address, "\n", "", a:fix_tips_width, a:log_verbose)
+    call boot#log_silent(a:log_address, "project::a:is_windows", a:is_windows, a:fix_tips_width, a:log_verbose)
     "   let l:git = finddir('.git', '.;')
     "   let l:git = finddir('.git', resolve(expand('%:p:h')))
     let l:git  = ""
@@ -348,9 +349,9 @@ function! boot#project(log_address, is_windows, log_verbose)
     let git_count  = 0
     for gp in git_list
         if (10 > git_count)
-            call boot#log_silent(a:log_address, "project::git_list[ 0" . git_count . " ]", gp, a:log_verbose)
+            call boot#log_silent(a:log_address, "project::git_list[ 0" . git_count . " ]", gp, a:fix_tips_width, a:log_verbose)
         else
-            call boot#log_silent(a:log_address, "project::git_list[ " . git_count . " ]", gp, a:log_verbose)
+            call boot#log_silent(a:log_address, "project::git_list[ " . git_count . " ]", gp, a:fix_tips_width, a:log_verbose)
         endif
         if ("" == l:git)
             let l:git     = gp
@@ -360,23 +361,23 @@ function! boot#project(log_address, is_windows, log_verbose)
         let git_count     += 1
     endfor
 
-    call boot#log_silent(a:log_address, "project::l:git", l:git, a:log_verbose)
-    call boot#log_silent(a:log_address, "project::getcwd()", getcwd(), a:log_verbose)
+    call boot#log_silent(a:log_address, "project::l:git", l:git, a:fix_tips_width, a:log_verbose)
+    call boot#log_silent(a:log_address, "project::getcwd()", getcwd(), a:fix_tips_width, a:log_verbose)
 
-    if l:git != ".git"     
+    if l:git != ".git"
         " when l:git == "" || l:git == "path/to/somewhere/.git"
         if 1 == a:is_windows
             let l:dir  = substitute(l:git, "\\.git", '', 'g')
         else
             let l:dir  = substitute(l:git, "\/.git", '', 'g')
         endif
-    else        
+    else
         " when l:git == ".git"
         " let l:dir  = "."     " let l:dir  = resolve(expand('%:p:h'))
         let l:dir  = resolve(expand(getcwd()))
     endif
-    call boot#log_silent(a:log_address, "project::l:dir", l:dir, a:log_verbose)
-    call boot#log_silent(a:log_address, "\n", "", a:log_verbose) 
+    call boot#log_silent(a:log_address, "project::l:dir", l:dir, a:fix_tips_width, a:log_verbose)
+    call boot#log_silent(a:log_address, "\n", "", a:fix_tips_width, a:log_verbose)
     return l:dir
 endfunction
 
