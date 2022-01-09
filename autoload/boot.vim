@@ -24,8 +24,26 @@
 " SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-if exists('g:autoloaded_boot')
+if exists('g:boot_loaded')
     finish
+endif
+
+let g:boot_loaded = 1
+
+if ! exists('g:log_address')
+    let g:log_address   = $HOME . '/.vim.log'
+endif
+if ! exists("g:log_verbose")
+    let g:log_verbose = 0
+endif
+if ! exists("g:fixed_tips_width")
+    let g:fixed_tips_width = 40
+endif
+
+if ! exists("g:_boot_debug")
+    let s:_boot_debug  = 0
+else
+    let s:_boot_debug = g:_boot_debug
 endif
 
 " https://vi.stackexchange.com/questions/2867/how-do-you-chomp-a-string-in-vim
@@ -338,20 +356,27 @@ command! -nargs=+ -complete=command LogSilent call boot#log_silent(<f-args>)
 
 " Get project directory
 function! boot#project(log_address, is_windows, fix_tips_width, log_verbose)
-    call boot#log_silent(a:log_address, "\n", "", a:fix_tips_width, a:log_verbose)
-    call boot#log_silent(a:log_address, "project::a:is_windows", a:is_windows, a:fix_tips_width, a:log_verbose)
-    "   let l:git = finddir('.git', '.;')
-    "   let l:git = finddir('.git', resolve(expand('%:p:h')))
+    if 1 == a:log_verbose
+        if 1 == s:_boot_debug
+            call boot#log_silent(a:log_address, "\n", "", a:fix_tips_width, a:log_verbose)
+            call boot#log_silent(a:log_address, "project::a:is_windows", a:is_windows, a:fix_tips_width, a:log_verbose)
+        endif
+    endif
+
+    " let l:git = finddir('.git', '.;')
+    " let l:git = finddir('.git', resolve(expand('%:p:h')))
     let l:git  = ""
-    "   let git_list = finddir(".git", resolve(expand("#". bufnr(). ":p:h")), "-1")
+    " let git_list = finddir(".git", resolve(expand("#". bufnr(). ":p:h")), "-1")
     let git_list = finddir(".git", ".;", "-1")
     let l:dir  = ""
     let git_count  = 0
     for gp in git_list
-        if (10 > git_count)
-            call boot#log_silent(a:log_address, "project::git_list[ 0" . git_count . " ]", gp, a:fix_tips_width, a:log_verbose)
-        else
-            call boot#log_silent(a:log_address, "project::git_list[ " . git_count . " ]", gp, a:fix_tips_width, a:log_verbose)
+        if 1 == s:_boot_debug
+            if (10 > git_count)
+                call boot#log_silent(a:log_address, "project::git_list[ 0" . git_count . " ]", gp, a:fix_tips_width, a:log_verbose)
+            else
+                call boot#log_silent(a:log_address, "project::git_list[ " . git_count . " ]", gp, a:fix_tips_width, a:log_verbose)
+            endif
         endif
         if ("" == l:git)
             let l:git     = gp
@@ -361,8 +386,12 @@ function! boot#project(log_address, is_windows, fix_tips_width, log_verbose)
         let git_count     += 1
     endfor
 
-    call boot#log_silent(a:log_address, "project::l:git", l:git, a:fix_tips_width, a:log_verbose)
-    call boot#log_silent(a:log_address, "project::getcwd()", getcwd(), a:fix_tips_width, a:log_verbose)
+    if 1 == a:log_verbose
+        if 1 == s:_boot_debug
+            call boot#log_silent(a:log_address, "project::l:git", l:git, a:fix_tips_width, a:log_verbose)
+            call boot#log_silent(a:log_address, "project::getcwd()", getcwd(), a:fix_tips_width, a:log_verbose)
+        endif
+    endif
 
     if l:git != ".git"
         " when l:git == "" || l:git == "path/to/somewhere/.git"
@@ -376,12 +405,15 @@ function! boot#project(log_address, is_windows, fix_tips_width, log_verbose)
         " let l:dir  = "."     " let l:dir  = resolve(expand('%:p:h'))
         let l:dir  = resolve(expand(getcwd()))
     endif
-    call boot#log_silent(a:log_address, "project::l:dir", l:dir, a:fix_tips_width, a:log_verbose)
-    call boot#log_silent(a:log_address, "\n", "", a:fix_tips_width, a:log_verbose)
+    if 1 == a:log_verbose
+        if 1 == s:_boot_debug
+            call boot#log_silent(a:log_address, "project::l:dir", l:dir, a:fix_tips_width, a:log_verbose)
+            call boot#log_silent(a:log_address, "\n", "", a:fix_tips_width, a:log_verbose)
+        endif
+    endif
     return l:dir
 endfunction
 
-let g:autoloaded_boot = 1
 
 
 
