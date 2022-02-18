@@ -3,7 +3,7 @@
 
 boot.vim
 
-A Vim plugin that provide basic operations such as system calls, logs and 
+A Vim plugin that provide basic operations such as system calls, logs and
 debug info.
 
 ===============================================================================
@@ -13,14 +13,14 @@ debug info.
 2. Compatibility
 3. Development
 4. References
-
+5. License
 
 1. Installation
 ===============================================================================
 The plugin is only one file. So you can check out the repository[1][4] and drop
 boot.vim into your directory.
 ~/.vim/pack/*/start/
-for Vim, or 
+for Vim, or
 ~/.local/share/nvim/site/pack/*/start/
 for Neovim.
 
@@ -30,7 +30,7 @@ if ! exists('g:boot_loaded')
     execute "source " .   boot_load_path
     execute "runtime! " . boot_load_path
 endif
-The g:plugin_dir is the plugin installation path. 
+The g:plugin_dir is the plugin installation path.
 Such as ~/.vim or ~/.local/share/nvim/site
 The '*' should be your plugin/package manager name
 
@@ -43,11 +43,15 @@ machines that have a proper shell. It likely also functions under cygwin.
 ===============================================================================
 Pull requests are very welcome.
 
-Some updates, with the goal of minimizing interaction and configuration. 
+Some updates, with the goal of minimizing interaction and configuration.
 Basic functionality out of the box.
 
 4. References
 ===============================================================================
 [1] https://github.com/trailblazing/keys.git
+
+5. License
+===============================================================================
+GPL v.3 and later
 
 ```
