@@ -7,13 +7,14 @@ endif
 let g:boot_loaded = 1
 
 let s:_init_value = {}
-let s:_init_value._log_address      = $HOME . '/.vim.log'
-let s:_init_value._fixed_tips_width = 27
-let s:_init_value._log_verbose      = 0
-let s:_init_value._is_windows       = 0
-let s:_init_value._script_develop   = 0
-let s:_init_value._log_one_line     = 1
-let s:_init_value._indent           = 4
+let s:_init_value._log_address          = $HOME . '/.vim.log'
+let s:_init_value._use_fixed_tips_width = 0
+let s:_init_value._fixed_tips_width     = 27
+let s:_init_value._log_verbose          = 0
+let s:_init_value._is_windows           = 0
+let s:_init_value._script_develop       = 0
+let s:_init_value._log_one_line         = 1
+let s:_init_value._indent               = 4
 
 if ! exists("g:_boot_develop")
     let s:_boot_develop = 0
@@ -109,13 +110,16 @@ function! boot#chomped_system( ... )
     return substitute(call('system', a:000), '\n\+$', '', '')
 endfunction
 
-" Vim has not been booted at this moment, so there are not so many functions available
-" let s:base_file_name = boot#chomped_system('basename ' . resolve(expand('#'. bufnr(). ':p')))
-" let s:base_file_name = boot#chomped_system('basename "$0"')
-" let s:base_file_name = boot#chomped_system('basename ' . fnamemodify(expand('%'), ':p'))
-" let s:_environment = boot#environment(s:environment, boot#chomped_system('basename ' . resolve(expand('#'. bufnr(). ':p'))), s:_boot_develop, s:_init_value)
-" let s:_environment = boot#environment(s:environment, s:base_file_name, s:_boot_develop, s:_init_value)
-let s:_environment = boot#environment(s:environment, "boot.vim", s:_boot_develop, s:_init_value)
+if ! exists("s:_environment")
+    " Vim has not been booted at this moment, so there are not so many functions available
+    " let s:base_file_name = boot#chomped_system('basename ' . resolve(expand('#'. bufnr(). ':p')))
+    " let s:base_file_name = boot#chomped_system('basename "$0"')
+    " let s:base_file_name = boot#chomped_system('basename ' . fnamemodify(expand('%'), ':p'))
+    " let s:_environment = boot#environment(s:environment, boot#chomped_system('basename ' . resolve(expand('#'. bufnr(). ':p'))), s:_boot_develop, s:_init_value)
+    " let s:_environment = boot#environment(s:environment, s:base_file_name, s:_boot_develop, s:_init_value)
+    let s:_environment = boot#environment(s:environment, "boot.vim", s:_boot_develop, s:_init_value)
+endif
+
 " https://vi.stackexchange.com/questions/5501/is-there-a-way-to-get-the-name-of-the-current-function-in-vim-script
 function! boot#function_name(sid, sfile)
     " return substitute(expand('<sfile>'), '.*\(\.\.\|\s\)', '', '')
@@ -400,11 +404,6 @@ function! s:right_hand_output(
 
 endfunction
 
-if ! exists("g:_use_fixed_tips_width")
-    let s:_use_fixed_tips_width = 0
-else
-    let s:_use_fixed_tips_width = g:_use_fixed_tips_width
-endif
 
 function! s:key_string(
     \ _indent,
@@ -463,7 +462,7 @@ function! s:key_string(
 
     let l:left_hand_string = l:left_hand_value
 
-    if s:_use_fixed_tips_width == 1
+    if exists("a:_environment._use_fixed_tips_width") && a:_environment._use_fixed_tips_width == 1
 
         " let l:left_hand_string = substitute(a:key, '!', '\\!', '')
         " let find_quote = stridx(l:left_hand_string, "\"")
@@ -548,10 +547,10 @@ function! s:key_string(
         endif
     endif
 
-    if 1 == a:_environment._log_verbose
+    if exists("a:_environment._log_verbose") && 1 == a:_environment._log_verbose
         " :silent! execute 'redir >> ' . a:_environment._log_address
 
-        if s:_use_fixed_tips_width == 1
+        if exists("a:_environment._use_fixed_tips_width") && a:_environment._use_fixed_tips_width == 1
             if "" != header
 
                 " if '>' == truncate_method
