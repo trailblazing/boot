@@ -103,19 +103,21 @@ let s:environment = {}
 
 " https://vi.stackexchange.com/questions/2867/how-do-you-chomp-a-string-in-vim
 function! boot#chomp(string)
-    return substitute(a:string, '\n\+$', '', '')
+    return strtrans(substitute(a:string, '\n\+$', '', ''))
 endfunction
 
-function! boot#chomped_system( ... )
-    return substitute(call('system', a:000), '\n\+$', '', '')
-endfunction
+" " Will break on some shell environment [busybox ash?]
+" function! boot#chomped_system( ... )
+"     " return substitute(call('system', a:000), '\n\+$', '', '')
+"     return strtrans(substitute(system(a:000), '\n\+$', '', ''))
+" endfunction
 
 if ! exists("s:_environment")
     " Vim has not been booted at this moment, so there are not so many functions available
-    " let s:base_file_name = boot#chomped_system('basename ' . resolve(expand('#'. bufnr(). ':p')))
-    " let s:base_file_name = boot#chomped_system('basename "$0"')
-    " let s:base_file_name = boot#chomped_system('basename ' . fnamemodify(expand('%'), ':p'))
-    " let s:_environment = boot#environment(s:environment, boot#chomped_system('basename ' . resolve(expand('#'. bufnr(). ':p'))), s:_boot_develop, s:_init_value)
+    " let s:base_file_name = boot#chomp(system('basename ' . resolve(expand('#'. bufnr(). ':p'))))
+    " let s:base_file_name = boot#chomp(system('basename "$0"'))
+    " let s:base_file_name = boot#chomp(system('basename ' . fnamemodify(expand('%'), ':p')))
+    " let s:_environment = boot#environment(s:environment, boot#chomp(system('basename ' . resolve(expand('#'. bufnr(). ':p')))), s:_boot_develop, s:_init_value)
     " let s:_environment = boot#environment(s:environment, s:base_file_name, s:_boot_develop, s:_init_value)
     let s:_environment = boot#environment(s:environment, "boot.vim", s:_boot_develop, s:_init_value)
 endif
