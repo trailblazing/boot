@@ -1,10 +1,10 @@
 " Utilities for vim operation
 
-if exists('g:boot_loaded')
+if exists('g:loaded_boot')
     finish
 endif
 
-let g:boot_loaded = 1
+let g:loaded_boot = 1
 
 let s:_init_value = {}
 let s:_init_value._log_address          = $HOME . '/.vim.log'
@@ -91,20 +91,11 @@ endfunction
 
 let s:environment = {}
 
-" if ! exists("g:_environment")
-"     let g:_environment  = deepcopy(s:_environment, 1)
-" endif
-" if ! exists("g:_environment._log_one_line")
-"     let g:_environment._log_one_line  = s:_init_value._log_one_line
-" endif
-" if ! exists("g:_environment._indent")
-"     let g:_environment._indent  = s:_init_value._indent
-" endif
 
 " https://vi.stackexchange.com/questions/2867/how-do-you-chomp-a-string-in-vim
-function! boot#chomp(string)
-    return strtrans(substitute(a:string, '\n\+$', '', ''))
-endfunction
+function! boot#chomp(str) abort "{{{
+    return strtrans(substitute(a:str, '\%(\r\n\|[\r\n]\)$', '', ''))
+endfunction "}}}
 
 " " Will break on some shell environment [busybox ash?]
 " function! boot#chomped_system( ... )
@@ -113,13 +104,21 @@ endfunction
 " endfunction
 
 if ! exists("s:_environment")
+    " https://github.com/tpope/vim-obsession/pull/9
+    " https://github.com/blueyed/SudoEdit.vim/commit/947b0092ef5d55196a71d6238aff8cf9ee1853b2
     " Vim has not been booted at this moment, so there are not so many functions available
-    " let s:base_file_name = boot#chomp(system('basename ' . resolve(expand('#'. bufnr(). ':p'))))
-    " let s:base_file_name = boot#chomp(system('basename "$0"'))
-    " let s:base_file_name = boot#chomp(system('basename ' . fnamemodify(expand('%'), ':p')))
-    " let s:_environment = boot#environment(s:environment, boot#chomp(system('basename ' . resolve(expand('#'. bufnr(). ':p')))), s:_boot_develop, s:_init_value)
-    " let s:_environment = boot#environment(s:environment, s:base_file_name, s:_boot_develop, s:_init_value)
-    let s:_environment = boot#environment(s:environment, "boot.vim", s:_boot_develop, s:_init_value)
+    " expand() never work as expected at this moment when using # or %
+    " let current_file = resolve(expand('#'. bufnr(). ':p'))
+    " let current_file = resolve(expand("#:p"))
+    " let current_file = resolve(expand("%:p"))
+    " Following code will work when booting vim/nvim. But after you've finished booting vim, command mode won't show you <sfile>
+    " let current_file = resolve(expand('<sfile>'))
+    " echo "current_file = " . current_file
+    " let _file_name = boot#chomp(system('basename ' . resolve(expand('<sfile>'))))
+    " echo "_file_name = " . _file_name
+    let s:_environment = boot#environment(s:environment, '<sfile>', s:_boot_develop, s:_init_value)
+    " let s:_environment = boot#environment(s:environment, 'boot.vim', s:_session_auto_develop, s:_init_value)
+    " echo s:_environment
 endif
 
 " https://vi.stackexchange.com/questions/5501/is-there-a-way-to-get-the-name-of-the-current-function-in-vim-script
@@ -228,10 +227,74 @@ function! boot#extension()
     if len(matching) == 1 && matching[0]  =~ 'setf'
         return matchstr(matching[0], 'setf\s\+\zs\k\+')
     endif
-    throw "sorry, I can't know"
+    throw "sorry, I don't know"
 endfunction
 
+function! s:save_file_via_doas() abort
+    " https://askubuntu.com/questions/454649/how-can-i-change-the-default-editor-of-the-sudoedit-command-to-be-vim
+    " https://unix.stackexchange.com/questions/90866/sudoedit-vim-force-write-update-without-quit/635704#635704
+    " inotifywait
+    " https://github.com/lambdalisue/suda.vim
+    " echo executable('sudo')
+    " https://github.com/vim-scripts/sudo.vim
+    "     (command line): vim sudo:/etc/passwd
+    "     (within vim):   :e sudo:/etc/passwd
+    if executable('doas')
+        execute (has('gui_running') ? '' : 'silent') 'write !env EDITOR=tee doasedit ' . shellescape(expand('%')) . ' >/dev/null '
+        " execute (has('gui_running') ? '' : 'silent') 'write !env EDITOR=doasedit doas -e ' . shellescape(expand('%')) . ' >/dev/null '
+        echohl WarningMsg
+        echon "Saved by doasedit"
+        echohl None
+    elseif executable('sudo')
+        execute (has('gui_running') ? '' : 'silent') 'write !env SUDO_EDITOR=tee sudo -e ' . shellescape(expand('%')) . ' >/dev/null '
+        echohl WarningMsg
+        echon "Saved by tee sudo "
+        echohl None
+    endif
+    let &modified = v:shell_error
+endfunction
+" https://unix.stackexchange.com/questions/249221/vim-sudo-hack-auto-reload
+cnoremap w!! silent! call <sid>save_file_via_doas()<cr>
 
+function! boot#write_generic()
+    let l:needs_su = v:true
+    if has('nvim')
+        if system(['whoami']) == system(['stat', '-c', '%U', expand('%')])
+            let l:needs_su = v:false
+        endif
+    else
+        if system('whoami') == system("stat -c %U " . expand('%'))
+            let l:needs_su = v:false
+        endif
+    endif
+    if l:needs_su
+        call s:save_file_via_doas()
+    else
+        execute("write " . expand('%'))
+        echohl WarningMsg
+        echon "Saved as current user"
+        echohl None
+    endif
+endfunction
+
+command! -nargs=0 W call boot#write_generic()
+" :cnoreabbrev <expr> w getcmdtype() == ":" && getcmdline() == 'w' ? 'W' : 'w'
+
+" silent will mute the summery of writting
+" :cnoreabbrev w silent! call boot#write_generic()
+:cnoreabbrev w call boot#write_generic()
+
+
+function! s:reload()
+    if exists('g:loaded_boot')
+        unlet g:loaded_boot
+    endif
+    " let g:debug_keys    = 1
+    silent! execute "source " . expand('%')
+    silent! execute "runtime! " . expand('%')
+endfunction
+
+command! -nargs=0 BR :call s:reload()
 
 function! s:tail(_head, _tail = "", _environment = g:_environment)
 
