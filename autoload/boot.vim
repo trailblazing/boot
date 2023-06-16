@@ -259,7 +259,7 @@ cnoremap w!! silent! call <sid>save_file_via_doas()<cr>
 function! boot#write_generic()
     let l:needs_su = v:true
     if has('nvim')
-        if system(['whoami']) == system(['stat', '-c', '%U', expand('%')])
+        if (system(['whoami']) == system(['stat', '-c', '%U', expand('%')])) || (join(split(system(['whoami']))) == 'root')
             let l:needs_su = v:false
         endif
     else
