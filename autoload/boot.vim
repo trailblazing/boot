@@ -8,8 +8,7 @@ let g:loaded_boot = 1
 
 let s:_init_value = {}
 let s:_init_value._log_address          = $HOME . '/.vim.log'
-let s:_init_value._use_fixed_tips_width = 0
-let s:_init_value._fixed_tips_width     = 27
+let s:_init_value._fixed_tips_width     = 37
 let s:_init_value._log_verbose          = 0
 let s:_init_value._is_windows           = 0
 let s:_init_value._script_develop       = 0
@@ -23,51 +22,84 @@ else
     let s:_boot_develop = g:_boot_develop
 endif
 
-function! boot#initialize(object, _verbose = g:_script_develop, _init_value = g:_environment)
+function! s:print_to_log(header,
+    \ key,
+    \ value,
+    \ fixed_tips_width = 37,
+    \ log_address = $HOME . '/.vim.log')
+
+    silent! execute(
+        \ '!printf ' . '"\%-' . 37  . 's: \%s\n"' .
+        \ ' "' . a:header . '::' . a:key . '"' .
+        \ ' "' . a:value . '"' .
+        \ ' >> ' . a:log_address . ' 2>&1 &' )
+endfunction
+
+function! boot#initialize(object,
+    \ _verbose = g:_script_develop,
+    \ _init_value = g:_environment)
+
     for [key, V] in items(a:_init_value)
         if 'new' ==? key
             continue
         endif
         if exists('g:_environment') && exists('g:_environment.' . key)
-            " let result = execute('echon g:_environment._' . key)
             execute('let a:object.' . key . ' = g:_environment.' . key)
             if 1 == a:_verbose
-                silent! execute '!(printf ' . '"\%-"' . a:_init_value._fixed_tips_width . '"s: \%s\n"' . ' g:_environment.' . key . ' "'
-                    \ . execute('echon a:object.' . key) . '")' . ' >> ' . a:_init_value._log_address . ' 2>&1 &'
+                call s:print_to_log(s:_file_name,
+                    \ "g:_environment." . key,
+                    \ execute('echon a:object.' . key),
+                    \ a:_init_value._fixed_tips_width, a:_init_value._log_address)
             endif
-            " if ! exists('a:object.' . key ) && exists('g:' . key)
         elseif exists('g:' . key)
-            " let result = execute('echon g:' . key)
             execute('let a:object.' . key . ' = g:' . key)
             if 1 == a:_verbose
-                silent! execute '!(printf ' . '"\%-"' . a:_init_value._fixed_tips_width . '"s: \%s\n"' . ' g:' . key . ' "'
-                    \ . execute('echon a:object.' . key) . '")' . ' >> ' . a:_init_value._log_address . ' 2>&1 &'
+                call s:print_to_log(s:_file_name,
+                    \ "g:" . key,
+                    \ execute('echon a:object.' . key),
+                    \ a:_init_value._fixed_tips_width, a:_init_value._log_address)
             endif
         elseif exists('a:_init_value.' . key)
-            " let result = execute('echon a:_' . key)
-            execute('let a:object.' . key . ' = ' . V)
+            execute('let a:object.' . key . ' = "' . V . '"')
             if 1 == a:_verbose
-                silent! execute '!(printf ' . '"\%-"' . a:_init_value._fixed_tips_width . '"s: \%s\n"' . ' a:_init_value.' . key . ' "'
-                    \ . execute('echon a:object.' . key) . '")' . ' >> ' . a:_init_value._log_address . ' 2>&1 &'
+                call s:print_to_log(s:_file_name,
+                    \ "a:_init_value." . key,
+                    \ execute('echon a:object.' . key),
+                    \ a:_init_value._fixed_tips_width, a:_init_value._log_address)
             endif
         endif
     endfor
     return a:object
 endfunction
 
-function! boot#show(object, file_name, _init_value = g:_environment)
-    silent! execute '!printf "\n"' . ' >> ' . a:_init_value._log_address . ' 2>&1 &'
+function! boot#show(object, file_name,
+    \ _init_value = g:_environment)
+
+    silent! execute '!printf "\n"' . ' >> '
+        \ . a:_init_value._log_address . ' 2>&1 &'
+
+    :let index = 0
+    for item in v:argv
+        call s:print_to_log(a:file_name, "v:argv[" . index . "]", item,
+            \ a:_init_value._fixed_tips_width, a:_init_value._log_address)
+        :let index = index + 1
+    endfor
+
     for [key, V] in items(a:object)
         " if 'new' ==? key
         "     continue
         " endif
-        " call boot#log_silent(file_name . '::s:_environment::' . key, V, g:_environment)
-        silent! execute '!(printf ' . '"\%-"' . a:_init_value._fixed_tips_width . '"s: \%s\n"' . ' ' . a:file_name . '::' . key . ' "'
-            \ . V . '")' . ' >> ' . a:_init_value._log_address . ' 2>&1 &'
+        call s:print_to_log(a:file_name, key, V,
+            \ a:_init_value._fixed_tips_width, a:_init_value._log_address)
     endfor
 endfunction
 
-function! boot#environment(_self, _file_name, _develop = g:_script_develop, _init_value = g:_environment)
+function! boot#environment(
+    \ _self,
+    \ _file_name,
+    \ _develop = g:_script_develop,
+    \ _init_value = g:_environment)
+
     let object = copy(a:_self)
 
     let object = boot#initialize(object, a:_develop, a:_init_value)
@@ -81,10 +113,9 @@ function! boot#environment(_self, _file_name, _develop = g:_script_develop, _ini
             endif
         endfor
     endif
-    " if 1 == s:_boot_develop
-    " let file_name = execute('echon bufname("%")')
+
     call boot#show(object, a:_file_name, a:_init_value)
-    " endif
+
     return object
 
 endfunction
@@ -93,31 +124,22 @@ let s:environment = {}
 
 
 " https://vi.stackexchange.com/questions/2867/how-do-you-chomp-a-string-in-vim
-function! boot#chomp(str) abort "{{{
-    return strtrans(substitute(a:str, '\%(\r\n\|[\r\n]\)$', '', ''))
-endfunction "}}}
-
-" " Will break on some shell environment [busybox ash?]
+" Will break on some shell environment [busybox ash?]
 " function! boot#chomped_system( ... )
 "     " return substitute(call('system', a:000), '\n\+$', '', '')
 "     return strtrans(substitute(system(a:000), '\n\+$', '', ''))
 " endfunction
+function! boot#chomp(str) abort "{{{
+    return strtrans(substitute(a:str, '\%(\r\n\|[\r\n]\)$', '', ''))
+endfunction "}}}
 
 if ! exists("s:_environment")
-    " https://github.com/tpope/vim-obsession/pull/9
-    " https://github.com/blueyed/SudoEdit.vim/commit/947b0092ef5d55196a71d6238aff8cf9ee1853b2
-    " Vim has not been booted at this moment, so there are not so many functions available
-    " expand() never work as expected at this moment when using # or %
-    " let current_file = resolve(expand('#'. bufnr(). ':p'))
-    " let current_file = resolve(expand("#:p"))
-    " let current_file = resolve(expand("%:p"))
-    " Following code will work when booting vim/nvim. But after you've finished booting vim, command mode won't show you <sfile>
-    " let current_file = resolve(expand('<sfile>'))
-    " echo "current_file = " . current_file
-    " let _file_name = boot#chomp(system('basename ' . resolve(expand('<sfile>'))))
-    " echo "_file_name = " . _file_name
-    let s:_environment = boot#environment(s:environment, '<sfile>', s:_boot_develop, s:_init_value)
-    " let s:_environment = boot#environment(s:environment, 'boot.vim', s:_session_auto_develop, s:_init_value)
+
+    let s:_file_name = boot#chomp(system('basename ' . resolve(expand('<script>'))))
+
+    let s:_environment = boot#environment(s:environment,
+        \ s:_file_name,
+        \ s:_boot_develop, s:_init_value)
     " echo s:_environment
 endif
 
@@ -206,15 +228,39 @@ func! boot#script_number(script_name)
 endfunc
 
 function! boot#standardize(_file_dir)
+    if '/' == a:_file_dir
+        return a:_file_dir
+    endif
     let l:standard_dir = a:_file_dir
-    let index = stridx(a:_file_dir, "\/")
-    if 0 != index
+    let l:index = stridx(a:_file_dir, "\/")
+    " a:_file_dir is a relative dir/empty
+    " ./ | dir_name | dir_name/folder | . | ""
+    if 0 != l:index || -1 == l:index
         " let l:standard_dir = getcwd() . '/' . a:_file_dir
         let l:standard_dir = fnamemodify(a:_file_dir, ':p:h')
+        return l:standard_dir
     endif
-    while '/' == l:standard_dir[ strlen(l:standard_dir) - 1 : strlen(l:standard_dir) - 1 ]
+    " let l:rindex = strridx(a:_file_dir, "\/")
+    " if strlen(a:_file_dir) - 1 == l:rindex
+    "     " let l:standard_dir = getcwd() . '/' . a:_file_dir
+    "     let l:standard_dir = fnamemodify(a:_file_dir, ':p:h')
+    " endif
+    let l:index = 0
+    while '/' ==
+        \ l:standard_dir[ strlen(l:standard_dir) - 1
+        \ : strlen(l:standard_dir) - 1 ]
+        " \ && -1 != stridx(l:standard_dir, "\/")
         " let l:standard_dir = l:standard_dir[ 0 : strlen(l:standard_dir) - 2 ]
         let l:standard_dir = fnamemodify(l:standard_dir, ':p:h')
+        let l:index = l:index + 1
+        if 100 <= l:index
+            let l:func_name = boot#function_name('#', expand('<sfile>'))
+            echohl WarningMsg
+            echom "l:standard_dir == " . l:standard_dir . "[ " . l:func_name . " ]"
+            call feedkeys("\<CR>")
+            echohl None
+            break
+        endif
     endwhile
     return l:standard_dir
 endfunction
@@ -222,7 +268,9 @@ endfunction
 " https://vi.stackexchange.com/questions/9962/get-filetype-by-extension-or-filename-in-vimscript
 function! boot#extension()
     let ext = expand('%:e')
-    let matching = uniq(sort(filter(split(execute('autocmd filetypedetect'), "\n"), 'v:val =~ "\*\.".ext')))
+    let matching =
+        \ uniq(sort(filter(split(execute('autocmd filetypedetect'), "\n"),
+        \ 'v:val =~ "\*\.".ext')))
 
     if len(matching) == 1 && matching[0]  =~ 'setf'
         return matchstr(matching[0], 'setf\s\+\zs\k\+')
@@ -240,15 +288,21 @@ function! s:save_file_via_doas() abort
     "     (command line): vim sudo:/etc/passwd
     "     (within vim):   :e sudo:/etc/passwd
     if executable('doas')
-        execute (has('gui_running') ? '' : 'silent') 'write !env EDITOR=tee doasedit ' . shellescape(expand('%')) . ' >/dev/null '
-        " execute (has('gui_running') ? '' : 'silent') 'write !env EDITOR=doasedit doas -e ' . shellescape(expand('%')) . ' >/dev/null '
+        silent! execute (has('gui_running') ? '' : 'silent')
+            \ 'write !env EDITOR=tee doasedit '
+            \ . shellescape(expand('%')) . ' >/dev/null '
+        " execute (has('gui_running') ? '' : 'silent')
+        "     \ 'write !env EDITOR=doasedit doas -e '
+        "     \ . shellescape(expand('%')) . ' >/dev/null '
         echohl WarningMsg
-        echon "Saved by doasedit"
+        echon expand('%') . " saved by doasedit"
         echohl None
     elseif executable('sudo')
-        execute (has('gui_running') ? '' : 'silent') 'write !env SUDO_EDITOR=tee sudo -e ' . shellescape(expand('%')) . ' >/dev/null '
+        silent! execute (has('gui_running') ? '' : 'silent')
+            \ 'write !env SUDO_EDITOR=tee sudo -e '
+            \ . shellescape(expand('%')) . ' >/dev/null '
         echohl WarningMsg
-        echon "Saved by tee sudo "
+        echon expand('%') . " saved by sudo "
         echohl None
     endif
     let &modified = v:shell_error
@@ -259,7 +313,8 @@ cnoremap w!! silent! call <sid>save_file_via_doas()<cr>
 function! boot#write_generic()
     let l:needs_su = v:true
     if has('nvim')
-        if (system(['whoami']) == system(['stat', '-c', '%U', expand('%')])) || (join(split(system(['whoami']))) == 'root')
+        if (system(['whoami']) == system(['stat', '-c', '%U', expand('%')])) ||
+            \ (join(split(system(['whoami']))) == 'root')
             let l:needs_su = v:false
         endif
     else
@@ -270,19 +325,20 @@ function! boot#write_generic()
     if l:needs_su
         call s:save_file_via_doas()
     else
-        execute("write " . expand('%'))
+        silent! execute("write " . expand('%'))
         echohl WarningMsg
-        echon "Saved as current user"
+        echon expand('%') . " saved as ". $USER
         echohl None
     endif
 endfunction
 
 command! -nargs=0 W call boot#write_generic()
-" :cnoreabbrev <expr> w getcmdtype() == ":" && getcmdline() == 'w' ? 'W' : 'w'
+:cnoreabbrev <expr> w getcmdtype() == ":" && getcmdline() == 'w' ? 'W' : 'w'
 
 " silent will mute the summery of writting
 " :cnoreabbrev w silent! call boot#write_generic()
-:cnoreabbrev w call boot#write_generic()
+" Automatic substitution will prevent you from typing "w" itself normally
+" :cnoreabbrev w call boot#write_generic()
 
 
 function! s:reload()
@@ -319,16 +375,23 @@ function! s:tail(_head, _tail = "", _environment = g:_environment)
     if type(l:head) == v:t_list
         let result .= "[ "
         for H in l:head
-            let result .= s:header(H, s:tail(l:tail, "", a:_environment), a:_environment) . ", "
+            let result .=
+                \ s:header(H, s:tail(l:tail, "", a:_environment),
+                \ a:_environment) . ", "
         endfor
         let result .= "]"
     elseif type(l:head) == v:t_dict
         let result .= "{ "
         for [H, T] in items(l:head)
-            let result .= s:header(H, s:header(T, s:tail(l:tail, "", a:_environment), a:_environment), a:_environment) . ", "
+            let result .=
+                \ s:header(H, s:header(T, s:tail(l:tail, "", a:_environment),
+                \ a:_environment), a:_environment) . ", "
         endfor
         let result .= "}"
-    elseif len(l:head) > 0 && len(l:tail) > 0 || type(l:tail) == v:t_dict || type(l:tail) == v:t_list
+    elseif len(l:head) > 0 &&
+        \ len(l:tail) > 0 ||
+        \ type(l:tail) == v:t_dict || type(l:tail) == v:t_list
+
         let result = l:head . " : " . s:tail(l:tail, "", a:_environment)
     elseif len(l:head) > 0 && len(l:tail) > 0
         let result = l:head . " : " . l:tail
@@ -362,16 +425,21 @@ function! s:header(_head, _tail = "", _environment = g:_environment)
     if type(l:head) == v:t_list
         let result .= "[ "
         for H in l:head
-            let result .= s:header(H, s:tail(l:tail, "", a:_environment), a:_environment) . ", "
+            let result .= s:header(H, s:tail(l:tail, "", a:_environment),
+                \ a:_environment) . ", "
         endfor
         let result .= "]"
     elseif type(l:head) == v:t_dict
         let result .= "{ "
         for [H, T] in items(l:head)
-            let result .= s:header(H, s:header(T, s:tail(l:tail, "", a:_environment), a:_environment), a:_environment) . ", "
+            let result .=
+                \ s:header(H, s:header(T, s:tail(l:tail, "", a:_environment),
+                \ a:_environment), a:_environment) . ", "
         endfor
         let result .= "}"
-    elseif len(l:head) > 0 && len(l:tail) > 0 || type(l:tail) == v:t_dict || type(l:tail) == v:t_list
+    elseif len(l:head) > 0 &&
+        \ len(l:tail) > 0 ||
+        \ type(l:tail) == v:t_dict || type(l:tail) == v:t_list
         let result = l:head . " : " . s:tail(l:tail, "", a:_environment)
     elseif len(l:head) > 0 && len(l:tail) > 0
         let result = l:head . " : " . l:tail
@@ -383,14 +451,19 @@ function! s:header(_head, _tail = "", _environment = g:_environment)
 endfunction
 
 " Dealing with list, dict, and Funcref ...
-function! boot#log_one_line(key, value = "", _environment = g:_environment)
+function! boot#log_one_line(key,
+    \ value = "", _environment = g:_environment)
+
     let result = s:header(a:key, a:value, a:_environment)
-    if 1 == a:_environment._log_verbose
-        " silent! execute 'redir >> ' . a:_environment._log_address
-        " silent! echom result
-        silent! execute '!(printf "\%s\n" "' . result . '") >> ' . a:_environment._log_address . ' 2>&1 &'
-        " redir END
-    endif
+
+    " "_log_verbose" should not be here
+    " if 1 == a:_environment._log_verbose
+    " silent! execute 'redir >> ' . a:_environment._log_address
+    " silent! echom result
+    silent! execute '!(printf "\%s\n" "' . result . '"
+        \ >> ' . a:_environment._log_address . ' 2>&1 &' . ')'
+    " redir END
+    " endif
 endfunction
 
 function! s:right_hand_output(
@@ -410,59 +483,93 @@ function! s:right_hand_output(
 
     if type(l:right_hand_value) == v:t_dict
         for [K, V] in items(l:right_hand_value)
-            " call s:log_no_new_line(a:_indent . "::" . a:_left_hand_string, K, V, a:_delimiter, a:_environment)
-            call s:log_no_new_line(a:_left_hand_string . "::", K, V, ',', '\n', a:_environment)
+            " call s:log_no_new_line(a:_indent . "::" .
+            " \ a:_left_hand_string, K, V, a:_delimiter, a:_environment)
+            call s:log_no_new_line(a:_left_hand_string . "::",
+                \ K, V, ',', '\n', a:_environment)
         endfor
     elseif type(l:right_hand_value) == v:t_list
         for V in l:right_hand_value
-            " call s:right_hand_output(a:_indent, a:_left_hand_string, V, ',', '\n', a:_environment)
-            call s:right_hand_output("", a:_left_hand_string, V, ',', '\n', a:_environment)
+            " call s:right_hand_output(a:_indent,
+            " \ a:_left_hand_string, V, ',', '\n', a:_environment)
+            call s:right_hand_output("", a:_left_hand_string,
+                \ V, ',', '\n', a:_environment)
         endfor
     else
         let l:right_hand_string = l:right_hand_value
-        " let l:right_hand_string = substitute(l:right_hand_string, '!', '\\!', '')
+        " let l:right_hand_string =
+        "     \ substitute(l:right_hand_string, '!', '\\!', '')
         " let find_quote = stridx(l:right_hand_string, "\"")
         " if -1 != find_quote
         "     echo "logsilent has double quote:" . l:right_hand_string
         " endif
-        " let l:right_hand_string = substitute(l:right_hand_string, '"', "'", '')
-        " let l:right_hand_string = substitute(l:right_hand_string, "!", '', '')
+        " let l:right_hand_string =
+        "     \ substitute(l:right_hand_string, '"', "'", '')
+        " let l:right_hand_string =
+        "     \ substitute(l:right_hand_string, "!", '', '')
 
-        let l:right_hand_string = substitute(l:right_hand_string, '\n\+$', '', '')
-        let l:right_hand_string = substitute(l:right_hand_string, '\n', '', '')
-        let l:right_hand_string = substitute(l:right_hand_string, "\n", '', '')
+        let l:right_hand_string =
+            \ substitute(l:right_hand_string, '\n\+$', '', '')
+        let l:right_hand_string =
+            \ substitute(l:right_hand_string, '\n', '', '')
+        let l:right_hand_string =
+            \ substitute(l:right_hand_string, "\n", '', '')
 
         if ! ("" == a:_left_hand_string && "" == l:right_hand_string)
-            call assert_true(type(a:_left_hand_string) != v:t_dict, "a:_left_hand_string design expected string")
-            call assert_true(type(l:right_hand_string) != v:t_dict, "l:right_hand_string design expected string")
+            call assert_true(type(a:_left_hand_string) !=
+                \ v:t_dict, "a:_left_hand_string design expected string")
+            call assert_true(type(l:right_hand_string) !=
+                \ v:t_dict, "l:right_hand_string design expected string")
 
-            " if type(l:right_hand_string) == v:t_dict || type(a:_left_hand_string) == v:t_dict
-            "     " silent! execute '!printf "\%s: \%s" "type(l:right_hand_string)" "' . type(l:right_hand_string) . '" >> ' . a:_environment._log_address . ' 2>&1 &'
-            "     call boot#log_one_line(">>>>value of l:right_hand_string", l:right_hand_string, a:_environment)
-            "     " silent! execute '!printf "\%s: \%s" "value of _left_hand_string" "' . a:_left_hand_string . '" >> ' . a:_environment._log_address . ' 2>&1 &'
-            "     call boot#log_one_line("<<<<value of a:_left_hand_string", a:_left_hand_string, a:_environment)
+            " if type(l:right_hand_string) == v:t_dict
+            " \ || type(a:_left_hand_string) == v:t_dict
+            "
+            "     " silent! execute '!printf "\%s: \%s"
+            "     "     \ "type(l:right_hand_string)" "' .
+            "     "     \ type(l:right_hand_string) . '" >> '
+            "     "     \ . a:_environment._log_address . ' 2>&1 &'
+            "     call boot#log_one_line(">>>>value of l:right_hand_string",
+            "         \ l:right_hand_string, a:_environment)
+            "
+            "     " silent! execute '!printf "\%s: \%s"
+            "     "     \ "value of _left_hand_string" "' .
+            "     "     \ a:_left_hand_string . '" >> '
+            "     "     \ . a:_environment._log_address . ' 2>&1 &'
+            "     call boot#log_one_line("<<<<value of a:_left_hand_string",
+            "         \ a:_left_hand_string, a:_environment)
+            "
             " else
-            "     let cmd = '!(printf "' . a:_indent . '\%s: \%s' . a:_delimiter . '" "' . a:_left_hand_string . '" "' .
-            "         \ l:right_hand_string . '") >> ' . a:_environment._log_address . ' 2>&1'
+            "     let cmd = '!(printf "' . a:_indent . '\%s: \%s'
+            "         \ . a:_delimiter . '" "' . a:_left_hand_string . '" "' .
+            "         \ l:right_hand_string . '") >> '
+            "         \ . a:_environment._log_address . ' 2>&1'
             " endif
 
-            " silent! execute '!printf "\n" "" >> ' . a:_environment._log_address . ' 2>&1 &'
+            " silent! execute '!printf "\n" "" >> '
+            "     \ . a:_environment._log_address . ' 2>&1 &'
             " call boot#log_one_line(">>>debug", "cmd", a:_environment)
-            " exec '!printf "' . shellescape(cmd, 1) . '" >> ' . a:_environment._log_address . ' 2>&1'
-            " silent! execute '!printf "\n" "" >> ' . a:_environment._log_address . ' 2>&1 &'
+            " exec '!printf "' . shellescape(cmd, 1)
+            "     \ . '" >> ' . a:_environment._log_address . ' 2>&1'
+            " silent! execute '!printf "\n" "" >> '
+            "     \ . a:_environment._log_address . ' 2>&1 &'
 
-            " silent! execute '!printf "\%' . a:_environment._indent . 's"' . ' "" >> '  . a:_environment._log_address . ' 2>&1 &'
-            " silent! execute '!(printf "\%s" "' . a:_left_hand_string . ': '. l:right_hand_string . '") >> ' . a:_environment._log_address . ' 2>&1 &'
+            " silent! execute '!printf "\%' . a:_environment._indent . 's"' .
+            " \ ' "" >> '  . a:_environment._log_address . ' 2>&1 &'
+            " silent! execute '!(printf "\%s" "' . a:_left_hand_string . ': '.
+            " \ l:right_hand_string . '") >> '
+            " \ . a:_environment._log_address . ' 2>&1 &'
+
             silent! execute '!(printf "\%s: \%s' .
                 \ a:_delimiter . ' ' .
                 \ a:_new_line . '" "' .
                 \ a:_indent .
                 \ a:_left_hand_string . '" "' .
-                \ l:right_hand_string . '") >> ' .
+                \ l:right_hand_string . '" >> ' .
                 \ a:_environment._log_address .
-                \ ' 2>&1 &'
+                \ ' 2>&1 &' . ')'
             " silent! echom a:_left_hand_string . ': '. l:right_hand_string
-            " :call system(shellescape('printf ' . a:_left_hand_string . ': '. l:right_hand_string ))
+            " :call system(shellescape('printf '
+            " \ . a:_left_hand_string . ': '. l:right_hand_string ))
 
         endif
     endif
@@ -488,7 +595,8 @@ function! s:key_string(
         return len(l:right_hand_value)
     endfunction
 
-    if s:length(a:_right_hand_value) == 0 && s:length(a:_left_hand_value) == 0
+    if s:length(a:_right_hand_value) == 0
+        \ && s:length(a:_left_hand_value) == 0
         return
     endif
 
@@ -527,159 +635,181 @@ function! s:key_string(
 
     let l:left_hand_string = l:left_hand_value
 
-    if exists("a:_environment._use_fixed_tips_width") && a:_environment._use_fixed_tips_width == 1
+    " let l:left_hand_string = substitute(a:key, '!', '\\!', '')
+    " let find_quote = stridx(l:left_hand_string, "\"")
+    " if -1 != find_quote
+    "     echom "logsilent has double quote:" . l:left_hand_string
+    " endif
+    " let l:left_hand_string = substitute(l:left_hand_string, '"', "'", '')
+    " let l:left_hand_string = substitute(l:left_hand_string_temp, "!", '', '')
 
-        " let l:left_hand_string = substitute(a:key, '!', '\\!', '')
-        " let find_quote = stridx(l:left_hand_string, "\"")
-        " if -1 != find_quote
-        "     echom "logsilent has double quote:" . l:left_hand_string
-        " endif
-        " let l:left_hand_string = substitute(l:left_hand_string, '"', "'", '')
-        " let l:left_hand_string = substitute(l:left_hand_string_temp, "!", '', '')
+    " devide l:left_hand_string tips to two parts for it has newline original
+    if l:left_hand_string =~ "\n" || l:left_hand_string =~ '\n'
+        \ || l:left_hand_string == "\n" || l:left_hand_string == '\n'
 
-        " devide l:left_hand_string tips to two parts for it has newline original
-        if l:left_hand_string =~ "\n" || l:left_hand_string =~ '\n' || l:left_hand_string == "\n" || l:left_hand_string == '\n'
-            if l:left_hand_string =~ "\n" || l:left_hand_string == "\n"
-                let index = stridx(l:left_hand_string, "\n")
-                if 0 == index
-                    let header = "\n"  " let header = '\n'   " trick
-                    " let truncate_method = ">"
-                elseif -1 != index
-                    " let header = l:left_hand_string[0: index - 1] . '\n' " trick
-                    let header = l:left_hand_string[0: index - 1] . "\n" " trick
-                endif
-                if index == strlen(l:left_hand_string) - strlen("\n")
-                    let l:left_hand_string = ""
-                else
-                    let l:left_hand_string = l:left_hand_string[index + strlen("\n") : strlen(l:left_hand_string) - 1]
-                endif
-                " silent! execute '!(printf header1: "'. header . '" >> ' . a:_environment._log_address . ' 2>&1 &) > /dev/null'
-                " silent! execute '!(printf l:left_hand_string1: "'. l:left_hand_string . '" >> ' . a:_environment._log_address . ' 2>&1 &) > /dev/null'
+        if l:left_hand_string =~ "\n" || l:left_hand_string == "\n"
+            let index = stridx(l:left_hand_string, "\n")
+            if 0 == index
+                let header = "\n"  " let header = '\n'   " trick
+                " let truncate_method = ">"
+            elseif -1 != index
+                " let header = l:left_hand_string[0: index - 1] . '\n' " trick
+                let header = l:left_hand_string[0: index - 1] . "\n" " trick
             endif
-            if l:left_hand_string =~ '\n' || l:left_hand_string == '\n'
-                let index = stridx(l:left_hand_string, '\n')
-                if 0 == index
-                    let header = "\n"  " let header = '\n' " trick
-                    " let truncate_method = ">"
-                elseif -1 != index
-                    " let header = l:left_hand_string[0: index - 1] . '\n' " trick
-                    let header = l:left_hand_string[0: index - 1] . "\n" " trick
-                endif
-                if index == strlen(l:left_hand_string) - strlen('\n')
-                    let l:left_hand_string = ""
-                else
-                    let l:left_hand_string = l:left_hand_string[index + strlen('\n') : strlen(l:left_hand_string) - 1]
-                endif
-                " silent! execute '!(printf header2: "'. header . '" >> ' . a:_environment._log_address . ' 2>&1 &) > /dev/null'
-                " silent! execute '!(printf l:left_hand_string2: "'. l:left_hand_string . '" >> ' . a:_environment._log_address . ' 2>&1 &) > /dev/null'
+            if index == strlen(l:left_hand_string) - strlen("\n")
+                let l:left_hand_string = ""
+            else
+                let l:left_hand_string =
+                    \ l:left_hand_string[index + strlen("\n")
+                    \ : strlen(l:left_hand_string) - 1]
             endif
+            " silent! execute '!(printf header1: "'. header . '" >> ' .
+            " \ a:_environment._log_address . ' 2>&1 &) > /dev/null'
+            " silent! execute '!(printf l:left_hand_string1: "'. l:left_hand_string .
+            " \ '" >> ' . a:_environment._log_address . ' 2>&1 &) > /dev/null'
         endif
-
-
-        let display_width = strdisplaywidth(l:left_hand_string)
-        " let fixed_tips_width = 40
-
-        let fat_body = ""
-        if a:_environment._fixed_tips_width <= display_width
-
-            "   if l:left_hand_string !~ "\n" && l:left_hand_string !~ '\n'
-            "       let l:left_hand_string .= '\n'
-            "   endif
-
-            let fat_body = l:left_hand_string
-            let l:left_hand_string = ""
-        endif
-        " Align indentations
-        if ! ("" == l:left_hand_string && 0 == s:length(l:right_hand_value))
-            let escape_char_count = 0
-
-            " for il in l:left_hand_string
-            "     if ("\\" == il)
-            "         let escape_char_count += 1
-            "     endif
-            " endfor
-
-            " if a:_environment._fixed_tips_width > display_width
-
-            let display_width = strdisplaywidth(l:left_hand_string)
-            let gap = a:_environment._fixed_tips_width - display_width + escape_char_count
-            let space_full_fill = ""
-            while 0 < gap
-                let space_full_fill .= " "
-                let gap -= 1
-            endwhile
-            let l:left_hand_string .= space_full_fill
+        if l:left_hand_string =~ '\n' || l:left_hand_string == '\n'
+            let index = stridx(l:left_hand_string, '\n')
+            if 0 == index
+                let header = "\n"  " let header = '\n' " trick
+                " let truncate_method = ">"
+            elseif -1 != index
+                " let header = l:left_hand_string[0: index - 1] . '\n' " trick
+                let header = l:left_hand_string[0: index - 1] . "\n" " trick
+            endif
+            if index == strlen(l:left_hand_string) - strlen('\n')
+                let l:left_hand_string = ""
+            else
+                let l:left_hand_string =
+                    \ l:left_hand_string[index + strlen('\n')
+                    \ : strlen(l:left_hand_string) - 1]
+            endif
+            " silent! execute '!(printf header2: "'. header . '" >> '
+            " \ . a:_environment._log_address . ' 2>&1 &) > /dev/null'
+            " silent! execute '!(printf l:left_hand_string2: "'. l:left_hand_string .
+            " \ '" >> ' . a:_environment._log_address . ' 2>&1 &) > /dev/null'
         endif
     endif
 
-    if exists("a:_environment._log_verbose") && 1 == a:_environment._log_verbose
-        " :silent! execute 'redir >> ' . a:_environment._log_address
 
-        if exists("a:_environment._use_fixed_tips_width") && a:_environment._use_fixed_tips_width == 1
-            if "" != header
+    let display_width = strdisplaywidth(l:left_hand_string)
+    " let fixed_tips_width = 40
 
-                " if '>' == truncate_method
-                "     let index = stridx(header, "\n")
-                "     if 0 != index
-                "         let header = '\n' . header
-                "     endif
-                "     let index = stridx(header, '\n')
-                "     if 0 != index
-                "         let header = '\n' . header
-                "     endif
-                " endif
+    let fat_body = ""
+    if a:_environment._fixed_tips_width <= display_width
 
-                if header == "\n" || header == '\n'
+        "   if l:left_hand_string !~ "\n" && l:left_hand_string !~ '\n'
+        "       let l:left_hand_string .= '\n'
+        "   endif
 
-                    " use ! to truncate the log
-                    " :silent! execute '!redir > ' . a:_environment._log_address  " redir udefined
-                    " :silent! execute 'redir! > ' . a:_environment._log_address  " truncate the log file
-                    " :silent! execute 'redir > ' . a:_environment._log_address   " does not work
+        let fat_body = l:left_hand_string
+        let l:left_hand_string = ""
+    endif
+    " Align indentations
+    if ! ("" == l:left_hand_string && 0 == s:length(l:right_hand_value))
+        let escape_char_count = 0
 
-                    " :silent! execute 'redir >> ' . a:_environment._log_address
+        " for il in l:left_hand_string
+        "     if ("\\" == il)
+        "         let escape_char_count += 1
+        "     endif
+        " endfor
 
-                    " echom "\n"  " ^@ or display follow message if keep it and will ask for confirmation if donot commont out
+        " if a:_environment._fixed_tips_width > display_width
 
-                    " silent! echom ""
-                    silent! execute '!printf "\n"' . ' >> '  . a:_environment._log_address . ' 2>&1'
-                    " redir END
+        let display_width = strdisplaywidth(l:left_hand_string)
+        let gap = a:_environment._fixed_tips_width
+            \ - display_width + escape_char_count
+        let space_full_fill = ""
+        while 0 < gap
+            let space_full_fill .= " "
+            let gap -= 1
+        endwhile
+        let l:left_hand_string .= space_full_fill
+    endif
 
-                    " " needs confirmation
-                    " silent! execute "!(printf \n  > " . a:_environment._log_address . " 2>&1) &>/dev/null"
-                else
-                    " :silent! execute 'redir >> ' . a:_environment._log_address
+    " "_log_verbose" should not be here
+    " if exists("a:_environment._log_verbose")
+    "     \ && 1 == a:_environment._log_verbose
 
-                    " silent! execute '!' . '(printf "' . header . '" ' . truncate_method . ' ' . a:_environment._log_address . ' 2>&1) &>/dev/null &'
-                    " :silent! execute '! "' . header . '" '
+    " :silent! execute 'redir >> ' . a:_environment._log_address
 
-                    " silent! echom header
-                    silent! execute '!printf "' . header . '\n"' . ' >> '  . a:_environment._log_address . ' 2>&1'
-                    " redir END
-                endif
-            endif
+    if "" != header
 
+        " if '>' == truncate_method
+        "     let index = stridx(header, "\n")
+        "     if 0 != index
+        "         let header = '\n' . header
+        "     endif
+        "     let index = stridx(header, '\n')
+        "     if 0 != index
+        "         let header = '\n' . header
+        "     endif
+        " endif
 
-            if "" != fat_body
+        if header == "\n" || header == '\n'
 
-                " if '>' == truncate_method && "" == header
-                "     let fat_body = '\n' . fat_body
-                " endif
-                " silent! execute '!' . '(printf "' . fat_body . '" >> ' . a:_environment._log_address . ' 2>&1) &>/dev/null &'
-                " :silent! execute '! "' . fat_body . '" '
+            " use ! to truncate the log
+            " :silent! execute 'redir! > '
+            " \ . a:_environment._log_address  " truncate the log file
+            "
+            " :silent! execute 'redir > '
+            " \ . a:_environment._log_address   " does not work
 
-                " silent! echom fat_body
-                silent! execute '!printf "' . fat_body . '"' . ' >> '  . a:_environment._log_address . ' 2>&1'
-            endif
+            " :silent! execute 'redir >> ' . a:_environment._log_address
 
-            " if '>' == truncate_method && "" == fat_body && "" == header
-            "     let l:left_hand_string = '\n' . l:left_hand_string
-            " endif
+            " echom "\n"  " ^@ or display follow message if keep
+            " it and will ask for confirmation if donot commont out
 
+            " silent! echom ""
+            silent! execute '!printf "\n"' . ' >> '
+                \ . a:_environment._log_address . ' 2>&1'
+
+            " redir END
+        else
+            " :silent! execute 'redir >> ' . a:_environment._log_address
+
+            " :silent! execute '!' . '(printf "' . header . '" '
+            "     \ . truncate_method . ' ' . a:_environment._log_address
+            "     \ . ' 2>&1) &'
+
+            " silent! echom header
+            silent! execute '!printf "' . header . '\n"'
+                \ . ' >> '  . a:_environment._log_address . ' 2>&1'
+            " redir END
         endif
-        call s:right_hand_output(a:_indent, l:left_hand_string, l:right_hand_value, a:_delimiter, a:_new_line, a:_environment)
+    endif
 
-        " redir END
-    endif     " a:_environment._log_verbose
+
+    if "" != fat_body
+
+        " if '>' == truncate_method && "" == header
+        "     let fat_body = '\n' . fat_body
+        " endif
+
+        " :silent! execute '!' . '(printf "' . fat_body . '" >> '
+        " \ . a:_environment._log_address . ' 2>&1) &'
+
+        " silent! echom fat_body
+        silent! execute '!printf "' . fat_body . '"'
+            \ . ' >> '  . a:_environment._log_address . ' 2>&1'
+    endif
+
+    " if '>' == truncate_method && "" == fat_body && "" == header
+    "     let l:left_hand_string = '\n' . l:left_hand_string
+    " endif
+
+    call s:right_hand_output(
+        \ a:_indent,
+        \ l:left_hand_string,
+        \ l:right_hand_value,
+        \ a:_delimiter,
+        \ a:_new_line,
+        \ a:_environment)
+
+    " redir END
+
+    " endif     " a:_environment._log_verbose
 endfunction
 
 function! s:log_no_new_line(
@@ -718,48 +848,60 @@ function! s:log_no_new_line(
 
     " let result = s:header(a:key, a:value, a:_environment)
 
-
     if type(l:left_hand_value) == v:t_list
-        " silent! execute '!printf "[ " >> ' . a:_environment._log_address . ' 2>&1'
         call s:log_no_new_line("", '[ ', "", ',', '\n', a:_environment)
         for H in l:left_hand_value
             call s:log_no_new_line('----', H, "", ',', '\n', a:_environment)
-            " silent! execute '!printf ", " >> ' . a:_environment._log_address . ' 2>&1'
         endfor
-        " silent! execute '!printf "]" >> ' . a:_environment._log_address . ' 2>&1'
         call s:log_no_new_line("", "", ']', ',', '\n', a:_environment)
-        call s:log_no_new_line('----', "", l:right_hand_value, ',', '\n', a:_environment)
-        " silent! execute '!printf "\n" "" >> ' . a:_environment._log_address . ' 2>&1 &'
+        call s:log_no_new_line(
+            \ '----', "", l:right_hand_value, ',', '\n', a:_environment)
     elseif type(l:left_hand_value) == v:t_dict
-        " silent! execute '!printf "{ " >> ' . a:_environment._log_address . ' 2>&1'
         call s:log_no_new_line("", '{ ', "", ',', '\n', a:_environment)
         for [H, T] in items(l:left_hand_value)
             call s:log_no_new_line('----', H, T, ',', '\n', a:_environment)
-            " silent! execute '!printf ", " >> ' . a:_environment._log_address . ' 2>&1'
         endfor
-        " silent! execute '!printf "}" >> ' . a:_environment._log_address . ' 2>&1'
         call s:log_no_new_line("", "", '}', ',', '\n', a:_environment)
-        call s:log_no_new_line('----', "", l:right_hand_value, ',', '\n', a:_environment)
-        " silent! execute '!printf "\n" "" >> ' . a:_environment._log_address . ' 2>&1 &'
+        call s:log_no_new_line(
+            \ '----', "", l:right_hand_value, ',', '\n', a:_environment)
     else
-        call s:key_string(a:_indent, l:left_hand_value, l:right_hand_value, a:_delimiter, a:_new_line, a:_environment)
+        call s:key_string(
+            \ a:_indent,
+            \ l:left_hand_value,
+            \ l:right_hand_value,
+            \ a:_delimiter,
+            \ a:_new_line,
+            \ a:_environment)
     endif
 endfunction
 
 " We do not handle a file truncation in this method
 " Just redir and echo to a fixed log file, g:log_address
 " function! boot#log_silent(log_address, tips, value, fixed_tips_width, log_verbose)
-function! boot#log_multi_line(_left_hand_value, _right_hand_value = "", _environment = g:_environment)
-    call s:log_no_new_line("", a:_left_hand_value, a:_right_hand_value, '', '', a:_environment)
-    silent! execute '!printf "\n" >> ' . a:_environment._log_address . ' 2>&1 &'
+function! boot#log_multi_line(
+    \ _left_hand_value,
+    \ _right_hand_value = "",
+    \ _environment = g:_environment)
+
+    call s:log_no_new_line(
+        \ "",
+        \ a:_left_hand_value,
+        \ a:_right_hand_value,
+        \ '',
+        \ '',
+        \ a:_environment)
+    silent! execute '!printf "\n" >> '
+        \ . a:_environment._log_address . ' 2>&1 &'
 endfunction
 
 if s:_environment._log_one_line == 1
-    function! boot#log_silent(key, value = "", _environment = g:_environment)
+    function! boot#log_silent(key,
+        \ value = "", _environment = g:_environment)
         call boot#log_one_line(a:key, a:value, a:_environment)
     endfunction
 else
-    function! boot#log_silent(key, value = "", _environment = g:_environment)
+    function! boot#log_silent(key,
+        \ value = "", _environment = g:_environment)
         call boot#log_multi_line(a:key, a:value, a:_environment)
     endfunction
 endif
@@ -798,41 +940,58 @@ endfunction
 
 " Get project directory
 " function! boot#project(log_address, is_windows, fixed_tips_width, log_verbose)
-function! boot#project(_file_dir = "", _environment = g:_environment)
+function! boot#project(
+    \ _file_dir = "",
+    \ _environment = g:_environment)
+
+    if '/' == a:_file_dir
+        return a:_file_dir
+    endif
+
     if 1 == a:_environment._log_verbose
         if 1 == s:_boot_develop
             call boot#log_silent("\n", "")
-            call boot#log_silent("project::a:_environment._is_windows", a:_environment._is_windows)
+            call boot#log_silent("project::a:_environment._is_windows"
+                \, a:_environment._is_windows)
         endif
     endif
 
     " let l:git = finddir('.git', '.;')
     " let l:git = finddir('.git', resolve(expand('%:p:h')))
     let l:git  = ""
-    let target_dir = fnamemodify(resolve(expand("#". bufnr(). ":p:h")), ':p:h')
+    let target_dir =
+        \ fnamemodify(resolve(expand("#". bufnr(). ":p:h")), ':p:h')
     if "" != a:_file_dir
         let target_dir = boot#standardize(a:_file_dir)
     endif
+
     " let git_list = finddir(".git", resolve(expand("#". bufnr(). ":p:h")), "-1")
     " let git_list = finddir(".git", ".;", "-1")
     " let git_list = finddir(".git", $PWD, "-1")
+
     let git_list = finddir(".git", target_dir . ";", "-1")
     let l:dir = ""
     let git_count  = 0
+
     for gp in git_list
         if 1 == s:_boot_develop
             if (10 > git_count)
-                call boot#log_silent("project::git_list[ 0" . git_count . " ]", gp)
+                call boot#log_silent(
+                    \ "project::git_list[ 0" . git_count . " ]", gp)
             else
-                call boot#log_silent("project::git_list[ " . git_count . " ]", gp)
+                call boot#log_silent(
+                    \ "project::git_list[ " . git_count . " ]", gp)
             endif
         endif
+
         if ("" == l:git)
             let l:git  = gp
         elseif (l:git =~ gp)
             let l:git  = gp
         endif
+
         let git_count += 1
+
     endfor
 
     if 1 == a:_environment._log_verbose
@@ -845,7 +1004,9 @@ function! boot#project(_file_dir = "", _environment = g:_environment)
     if l:git != ".git"
         " when l:git == "" || l:git == "path/to/somewhere/.git"
         if "" == l:git
-            let l:dir  = fnamemodify(resolve(expand("#". bufnr(). ":p:h")), ':p:h')
+            let l:dir  =
+                \ fnamemodify(
+                \ resolve(expand("#". bufnr(). ":p:h")), ':p:h')
         else
             if 1 == a:_environment._is_windows
                 let l:dir  = substitute(l:git, "\\.git", '', 'g')
@@ -858,7 +1019,9 @@ function! boot#project(_file_dir = "", _environment = g:_environment)
         " let l:dir  = "."
         " let l:dir  = resolve(expand('%:p:h'))
         " let l:dir  = resolve(expand(getcwd()))
-        let l:dir  = fnamemodify(resolve(expand("#". bufnr(). ":p:h")), ':p:h')
+        let l:dir  =
+            \ fnamemodify(
+            \ resolve(expand("#". bufnr(). ":p:h")), ':p:h')
 
     endif
 
@@ -870,7 +1033,9 @@ function! boot#project(_file_dir = "", _environment = g:_environment)
             call boot#log_silent("\n", "")
         endif
     endif
+
     return l:dir
+
 endfunction
 
 " " map <F2> :call s:execute_on_writable(':call NERDTreeTlist()') <cr>

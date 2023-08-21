@@ -19,20 +19,29 @@ debug info.
 ===============================================================================
 The plugin is only one file. So you can check out the repository[1][4] and drop
 boot.vim into your directory.
-~/.vim/pack/*/start/
-for Vim, or
-~/.local/share/nvim/site/pack/*/start/
-for Neovim.
+~/.vim/pack/*/start/ for Vim, or
+~/.local/share/nvim/site/pack/*/start/ for Neovim.
+For package management lazy.nvim
+In some plugins .lua
+    {
+        "trailblazing/boot",
+        event = { "VimEnter" },
+        lazy = false,
+    },
 
-If you'd like to change the loading sequence:
-if ! exists('g:boot_loaded')
-    let boot_load_path = g:plugin_dir . '/pack/*/start/boot/autoload/boot.vim'
-    execute "source " .   boot_load_path
+In config.lua
+local boot_path = vim.fn.stdpath("data") .. "lazy/boot"
+if fn.empty(fn.glob(boot_path)) > 0 then
+    do return end
+end
+vim.opt.rtp:prepend(boot_path)
+
+-- If you'd like to change the loading sequence:
+vim.cmd([[
+    let boot_load_path = stdpath("data") . '/lazy/boot/autoload/boot.vim'
+    execute "source " . boot_load_path
     execute "runtime! " . boot_load_path
-endif
-The g:plugin_dir is the plugin installation path.
-Such as ~/.vim or ~/.local/share/nvim/site
-The '*' should be your plugin/package manager name
+]])
 
 2. Compatibility
 ===============================================================================
