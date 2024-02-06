@@ -331,6 +331,9 @@ function! boot#write_generic()
 		echon expand('%') . " saved as ". $USER
 		echohl None
 	endif
+	if g:loaded_session_auto == 1
+		:SA
+	endif
 endfunction
 
 command! -nargs=0 W call boot#write_generic()
